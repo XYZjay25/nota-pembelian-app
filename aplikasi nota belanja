@@ -28,9 +28,10 @@
             background: #555;
         }
     </style>
-    <!-- PWA Manifest Link -->
-    <!-- Catatan: Untuk fungsionalitas PWA penuh, file manifest.json dan sw.js perlu di-host secara terpisah di server web. -->
-    <link rel="manifest" href="manifest.json">
+    <!-- PWA Manifest embedded as Data URL -->
+    <!-- Catatan: Meskipun manifest di-embed, fitur PWA penuh (instalasi ke layar beranda, caching offline)
+         membutuhkan hosting di server web (http:// atau https://) karena batasan keamanan browser. -->
+    <link rel="manifest" href="data:application/json;base64,eyJzdGFydF91cmwiOiIuLyIsImRpc3BsYXkiOiJzdGFuZGFsb25lIiwibmFtZSI6IkFwbGlrYXNpIE5vdGEgUGVtYmVsaWFuIiwic2hvcnRfbmFtZSI6Ik5vdGEgUGVtYmVsaWFuIiwiZGVzY3JpcHRpb24iOiJBcHBsaWthc2kgc2VkZXJmYWhhbmEgdW50dWsgbWVuY2F0YXQgbm90YSBwZW1iaWxpYW4uIiwiYmFja2dyb3VuZF9jb2xvciI6IiNmMGYyZjUiLCJ0aGVtZV9jb2xvciI6IiM0Mjk5ZTExIiwiaWNvbnMiOlt7InNyYyI6Imh0dHBzOi8vcGxhY2Vob2xkLmNvLzE5MngxOTIvNDI5OWUxL2ZmZmZmZj90ZXh0PU5QIiwic2l6ZXMiOiIxOTJ4MTkyIiwidHlwZSI6ImltYWdlL3BuZyJ9LHsic3JjIjoiaHR0cHM6Ly9wbGFjZWhvbGQuY28vNTEyeDUxMi80Mjk5ZTEvZmZmZmZmP3RleHQ9TlAiLCJzaXplcyI6IjUxMng1MTIiLCJ0eXBlIjoiY3NzIn1dfQ==">
 </head>
 <body class="p-4 sm:p-6 md:p-8 flex items-center justify-center min-h-screen">
     <div class="bg-white p-6 sm:p-8 rounded-xl shadow-lg w-full max-w-4xl">
@@ -266,22 +267,6 @@
             link.click();
             document.body.removeChild(link); // Clean up
         });
-
-        // PWA Service Worker Registration
-        // Catatan: Untuk lingkungan pengembangan seperti ini, pendaftaran Service Worker dari Blob URL mungkin memiliki batasan.
-        // Untuk PWA yang berfungsi penuh, file manifest.json dan sw.js harus di-host secara terpisah di server web.
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js') // Referensi langsung ke file sw.js
-                    .then(registration => {
-                        console.log('Service Worker registered with scope:', registration.scope);
-                    })
-                    .catch(error => {
-                        console.error('Service Worker registration failed:', error);
-                        console.error('Pastikan file sw.js dan manifest.json berada di direktori yang sama dengan index.html dan di-host melalui server web.');
-                    });
-            });
-        }
 
         // Load items and render when script loads
         loadItemsFromLocalStorage();
