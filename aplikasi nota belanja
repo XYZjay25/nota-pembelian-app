@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplikasi Nota Pembelian</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom font for better aesthetics */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5; /* Light gray background */
+        }
+        /* Custom scrollbar for better UX */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+    </style>
+    <!-- PWA Manifest Link -->
+    <!-- Catatan: Untuk fungsionalitas PWA penuh, file manifest.json dan sw.js perlu di-host secara terpisah di server web. -->
+    <link rel="manifest" href="manifest.json">
+</head>
+<body class="p-4 sm:p-6 md:p-8 flex items-center justify-center min-h-screen">
+    <div class="bg-white p-6 sm:p-8 rounded-xl shadow-lg w-full max-w-4xl">
+        <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">Nota Pembelian</h1>
+
+        <!-- Input Section -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div>
+                <label for="purchaseDate" class="block text-sm font-medium text-gray-700 mb-1">Tanggal:</label>
+                <input type="date" id="purchaseDate" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" value="">
+            </div>
+            <div>
+                <label for="itemName" class="block text-sm font-medium text-gray-700 mb-1">Nama Barang:</label>
+                <input type="text" id="itemName" placeholder="Masukkan nama barang" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+            </div>
+            <div>
+                <label for="itemVolume" class="block text-sm font-medium text-gray-700 mb-1">Volume/Jumlah:</label>
+                <input type="number" id="itemVolume" placeholder="Jumlah" min="1" value="1" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+            </div>
+            <div>
+                <label for="itemPrice" class="block text-sm font-medium text-gray-700 mb-1">Harga Satuan (Rp):</label>
+                <input type="number" id="itemPrice" placeholder="Harga" min="0" value="0" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+            </div>
+            <div class="md:col-span-2">
+                <label for="itemTotalPrice" class="block text-sm font-medium text-gray-700 mb-1">Total Harga Barang (Rp):</label>
+                <input type="text" id="itemTotalPrice" readonly class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 text-gray-600 cursor-not-allowed sm:text-sm">
+            </div>
+        </div>
+
+        <div class="flex flex-col sm:flex-row gap-4 mb-6">
+            <button id="addItemBtn" class="w-full sm:w-1/2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md shadow-md transition duration-300 ease-in-out transform hover:scale-105">
+                Tambah Barang
+            </button>
+            <button id="downloadCsvBtn" class="w-full sm:w-1/2 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md shadow-md transition duration-300 ease-in-out transform hover:scale-105">
+                Unduh Nota (CSV)
+            </button>
+        </div>
+
+        <!-- Items List Section -->
+        <div class="overflow-x-auto rounded-lg shadow-md mb-6">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal</th>
+                        <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama Barang</th>
+                        <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Volume</th>
+                        <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Harga Satuan</th>
+                        <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Harga</th>
+                        <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="itemsTableBody" class="bg-white divide-y divide-gray-200">
+                    <!-- Items will be added here dynamically -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Grand Total Section -->
+        <div class="flex justify-end items-center mt-4">
+            <span class="text-lg font-semibold text-gray-800 mr-2">Total Keseluruhan:</span>
+            <span id="grandTotal" class="text-2xl font-bold text-blue-700">Rp 0</span>
+        </div>
+    </div>
+
+    <script>
+        // Get DOM elements
+        const purchaseDateInput = document.getElementById('purchaseDate');
+        const itemNameInput = document.getElementById('itemName');
+        const itemVolumeInput = document.getElementById('itemVolume');
+        const itemPriceInput = document.getElementById('itemPrice');
+        const itemTotalPriceInput = document.getElementById('itemTotalPrice');
+        const addItemBtn = document.getElementById('addItemBtn');
+        const downloadCsvBtn = document.getElementById('downloadCsvBtn'); // New button
+        const itemsTableBody = document.getElementById('itemsTableBody');
+        const grandTotalSpan = document.getElementById('grandTotal');
+
+        let items = []; // Array to store all purchase items
+
+        // Set today's date as default
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed
+        const day = String(today.getDate()).padStart(2, '0');
+        purchaseDateInput.value = `${year}-${month}-${day}`;
+
+        // Function to format number as Rupiah currency
+        function formatRupiah(amount) {
+            return new Intl.NumberFormat('id-ID', {
+                style: 'currency',
+                currency: 'IDR',
+                minimumFractionDigits: 0
+            }).format(amount);
+        }
+
+        // Calculate total price for current item
+        function calculateItemTotalPrice() {
+            const volume = parseFloat(itemVolumeInput.value) || 0;
+            const price = parseFloat(itemPriceInput.value) || 0;
+            const total = volume * price;
+            itemTotalPriceInput.value = formatRupiah(total);
+        }
+
+        // Add event listeners for input changes to update item total price
+        itemVolumeInput.addEventListener('input', calculateItemTotalPrice);
+        itemPriceInput.addEventListener('input', calculateItemTotalPrice);
+
+        // Initial calculation when page loads
+        calculateItemTotalPrice();
+
+        // Function to save items to Local Storage
+        function saveItemsToLocalStorage() {
+            localStorage.setItem('purchaseItems', JSON.stringify(items));
+        }
+
+        // Function to load items from Local Storage
+        function loadItemsFromLocalStorage() {
+            const storedItems = localStorage.getItem('purchaseItems');
+            if (storedItems) {
+                items = JSON.parse(storedItems);
+            }
+        }
+
+        // Function to render all items in the table
+        function renderItems() {
+            itemsTableBody.innerHTML = ''; // Clear existing rows
+            let grandTotal = 0;
+
+            if (items.length === 0) {
+                itemsTableBody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="px-4 py-3 text-center text-gray-500 italic">Belum ada barang ditambahkan.</td>
+                    </tr>
+                `;
+            } else {
+                items.forEach((item, index) => {
+                    const row = itemsTableBody.insertRow();
+                    row.className = 'hover:bg-gray-50';
+
+                    row.insertCell(0).textContent = item.date;
+                    row.insertCell(1).textContent = item.name;
+                    row.insertCell(2).textContent = item.volume;
+                    row.insertCell(3).textContent = formatRupiah(item.price);
+                    row.insertCell(4).textContent = formatRupiah(item.total);
+                    grandTotal += item.total;
+
+                    // Action button (delete)
+                    const actionCell = row.insertCell(5);
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.textContent = 'Hapus';
+                    deleteBtn.className = 'bg-red-500 hover:bg-red-600 text-white text-xs font-bold py-1 px-2 rounded-full transition duration-200 ease-in-out';
+                    deleteBtn.onclick = () => deleteItem(index);
+                    actionCell.appendChild(deleteBtn);
+                });
+            }
+
+            grandTotalSpan.textContent = formatRupiah(grandTotal);
+            saveItemsToLocalStorage(); // Save items whenever they are rendered (added/deleted)
+        }
+
+        // Function to add a new item
+        addItemBtn.addEventListener('click', () => {
+            const date = purchaseDateInput.value;
+            const name = itemNameInput.value.trim();
+            const volume = parseFloat(itemVolumeInput.value);
+            const price = parseFloat(itemPriceInput.value);
+            const total = volume * price;
+
+            if (!date || !name || isNaN(volume) || volume <= 0 || isNaN(price) || price < 0) {
+                // Using a simple message box instead of alert()
+                const messageBox = document.createElement('div');
+                messageBox.className = 'fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-red-500 text-white p-4 rounded-md shadow-lg z-50';
+                messageBox.textContent = 'Mohon lengkapi semua kolom dengan data yang valid.';
+                document.body.appendChild(messageBox);
+                setTimeout(() => {
+                    messageBox.remove();
+                }, 3000); // Remove message after 3 seconds
+                return;
+            }
+
+            const newItem = { date, name, volume, price, total };
+            items.push(newItem);
+            renderItems();
+
+            // Clear input fields after adding
+            itemNameInput.value = '';
+            itemVolumeInput.value = '1';
+            itemPriceInput.value = '0';
+            calculateItemTotalPrice(); // Recalculate total for cleared inputs
+            itemNameInput.focus(); // Focus on item name for next entry
+        });
+
+        // Function to delete an item
+        function deleteItem(index) {
+            items.splice(index, 1); // Remove item from array
+            renderItems(); // Re-render the table
+        }
+
+        // Function to download data as CSV
+        downloadCsvBtn.addEventListener('click', () => {
+            if (items.length === 0) {
+                const messageBox = document.createElement('div');
+                messageBox.className = 'fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-yellow-500 text-white p-4 rounded-md shadow-lg z-50';
+                messageBox.textContent = 'Tidak ada data untuk diunduh.';
+                document.body.appendChild(messageBox);
+                setTimeout(() => {
+                    messageBox.remove();
+                }, 3000);
+                return;
+            }
+
+            let csvContent = "data:text/csv;charset=utf-8,";
+            // Add header row
+            csvContent += "Tanggal,Nama Barang,Volume,Harga Satuan,Total Harga\n";
+
+            // Add data rows
+            items.forEach(item => {
+                const row = [
+                    `"${item.date}"`, // Ensure date is quoted to prevent Excel issues
+                    `"${item.name.replace(/"/g, '""')}"`, // Handle commas and quotes in item name
+                    item.volume,
+                    item.price,
+                    item.total
+                ].join(",");
+                csvContent += row + "\n";
+            });
+
+            // Create a temporary link and trigger download
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "nota_pembelian.csv");
+            document.body.appendChild(link); // Required for Firefox
+            link.click();
+            document.body.removeChild(link); // Clean up
+        });
+
+        // PWA Service Worker Registration
+        // Catatan: Untuk lingkungan pengembangan seperti ini, pendaftaran Service Worker dari Blob URL mungkin memiliki batasan.
+        // Untuk PWA yang berfungsi penuh, file manifest.json dan sw.js harus di-host secara terpisah di server web.
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js') // Referensi langsung ke file sw.js
+                    .then(registration => {
+                        console.log('Service Worker registered with scope:', registration.scope);
+                    })
+                    .catch(error => {
+                        console.error('Service Worker registration failed:', error);
+                        console.error('Pastikan file sw.js dan manifest.json berada di direktori yang sama dengan index.html dan di-host melalui server web.');
+                    });
+            });
+        }
+
+        // Load items and render when script loads
+        loadItemsFromLocalStorage();
+        renderItems();
+    </script>
+</body>
+</html>
